@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Interest {
-    private String interest;
-    private Integer level;
+public class Location {
+    private double[] coordinates;
+    private String type="Point";
 }

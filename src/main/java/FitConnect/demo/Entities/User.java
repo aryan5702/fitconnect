@@ -1,12 +1,16 @@
 package FitConnect.demo.Entities;
 
-import jakarta.persistence.*;
+import FitConnect.demo.POJO.Location;
+import jakarta.persistence.Id;
 import lombok.*;
+import org.springframework.data.mongodb.core.index.GeoSpatialIndexType;
+import org.springframework.data.mongodb.core.index.GeoSpatialIndexed;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.format.annotation.DateTimeFormat;
 
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashSet;
 import FitConnect.demo.POJO.Interest;
 
 @Getter
@@ -16,39 +20,22 @@ import FitConnect.demo.POJO.Interest;
 @Document(collection = "Users")
 public class User {
 
-    @Column(name="Email")
     @Id
+    @Indexed(unique = true)
     private String email;
 
-    @Column(name="FirstName")
     private String firstName;
-
-    @Column(name="LastName")
     private String lastName;
-
-    @Column(name="Gender")
     private String gender;
-
-    @Column(name="Bio")
     private String bio;
 
-    @Column(name="DOB")
     @DateTimeFormat(pattern = "dd/MM/yyyy")
-    private Date dateOfBirth;
+    private Date dob;
 
-    @Column(name="PhoneNumber")
-    private Integer phoneNumber;
+    @GeoSpatialIndexed(type = GeoSpatialIndexType.GEO_2DSPHERE)
+    private Location location;
 
-    @Column(name="Longitude")
-    private String longitude;
-
-    @Column(name="Latitude")
-    private String latitude;
-
-    @Column(name="ProfilePic")
-    private byte[] profilePicture;
-
-    @Column(name="Interests")
-    private HashSet<Interest> interests;
+    private byte[] profilePic;
+    private ArrayList<Interest> interests;
 
 }
