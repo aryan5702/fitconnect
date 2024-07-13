@@ -10,6 +10,6 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Location {
-    private double[] coordinates;
+    private double[] coordinates; // {Longitude, Latitude}
     private String type="Point";
 }
