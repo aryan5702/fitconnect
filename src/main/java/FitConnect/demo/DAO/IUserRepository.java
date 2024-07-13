@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface UserRepository extends MongoRepository<User,String> {
+public interface IUserRepository extends MongoRepository<User,String> {
     @Query("{ 'email': { $ne: ?0, $exists: true }, 'location': { $geoWithin: { $centerSphere: [ [ ?1, ?2 ], ?3 ] } } }")
     List<User> findUsersByLocation(String email, double longitude, double latitude, double distanceInRadians);
 }
