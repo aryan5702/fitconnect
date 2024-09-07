@@ -4,113 +4,77 @@ import FitConnect.demo.DAO.IUserRepository;
 import FitConnect.demo.Entities.User;
 import FitConnect.demo.Exceptions.UserAlreadyExistsException;
 import FitConnect.demo.Exceptions.UserNotFoundException;
-import org.springframework.beans.factory.annotation.Autowired;
+import FitConnect.demo.POJO.Interest;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Service
 public class UserService {
-    @Autowired
-    private IUserRepository userRepository;
 
-    public User addUser(User user) {
-        try{
-            if(userRepository.existsById(user.getEmail())) {
-                throw new UserAlreadyExistsException("User with email " + user.getEmail() + " already exists.");
-            }
-            return userRepository.save(user);
-        } catch (UserAlreadyExistsException e) {
-            System.err.println("\n\n\n\n\n\n" + e.getMessage() + "\n\n\n\n\n\n");
-            throw e;
-        } catch (Exception e) {
-            System.err.println("\n\n\n\n\nAn unexpected error occurred: " + e.getMessage() + "\n\n\n\n\n");
-            throw  e;
-        }
+    private final IUserRepository userRepository;
+
+    public UserService(IUserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
-    public User getUser(String email) {
-        try{
-            if(userRepository.existsById(email)) {
-                return userRepository.findById(email).get();
-            }
-            throw new UserNotFoundException("User with email " + email + " does not exists.");
-        } catch (UserNotFoundException e) {
-            System.err.println("\n\n\n\n\n\n" + e.getMessage() + "\n\n\n\n\n\n");
-            throw e;
-        } catch (Exception e) {
-            System.err.println("\n\n\n\n\nAn unexpected error occurred: " + e.getMessage() + "\n\n\n\n\n");
-            throw  e;
-        }
+    public Mono<User> addUser(User user) {
+        return userRepository.existsById(user.getEmail())
+                .flatMap(exists -> {
+                    if (exists) {
+                        return Mono.error(new UserAlreadyExistsException("User already exists!"));
+                    }
+                    return userRepository.save(user);
+                });
     }
 
-    public List<User> getUsers() {
-        try{
-            return userRepository.findAll();
-        } catch (Exception e) {
-            System.err.println("\n\n\n\n\nAn unexpected error occurred: " + e.getMessage() + "\n\n\n\n\n");
-            throw  e;
-        }
+    public Mono<User> getUser(String email) {
+        return userRepository.findById(email)
+                .switchIfEmpty(Mono.error(new UserNotFoundException("User not found!")));
     }
 
-    public List<User> getUserByDistance(String email, double longitude, double latitude, double distance) {
-        try{
-            if(userRepository.existsById(email)) throw new UserNotFoundException("User with email " + email + " does not exists.");
-            return userRepository.findUsersByLocation(email, longitude, latitude, distance);
-//            List<User> usersWithoutEmail = new ArrayList<>();
-//            for(User user : users){
-//                if(!user.getEmail().equals(email)) usersWithoutEmail.add(user);
-//            }
-//            return  usersWithoutEmail;
-//            return users;
-        } catch (UserNotFoundException e) {
-            System.err.println("\n\n\n\n\n\n" + e.getMessage() + "\n\n\n\n\n\n");
-            throw e;
-        } catch (Exception e) {
-            System.err.println("\n\n\n\n\nAn unexpected error occurred: " + e.getMessage() + "\n\n\n\n\n");
-            throw  e;
-        }
+    public Flux<User> getUsers() {
+        return userRepository.findAll();
     }
 
-    public User updateUser(User user) {
-        try{
-            if(userRepository.existsById(user.getEmail())) {
-                User currentUser = userRepository.findById(user.getEmail()).get();
-
-                if (user.getFirstName() != null && !user.getFirstName().equals("")) currentUser.setFirstName(user.getFirstName());
-                if (user.getLastName() != null && !user.getLastName().equals("")) currentUser.setLastName(user.getLastName());
-                if (user.getGender() != null && !user.getGender().equals("")) currentUser.setGender(user.getGender());
-                if (user.getBio() != null) currentUser.setBio(user.getBio());
-                if (user.getDob() != null) currentUser.setDob(user.getDob());
-                if (user.getLocation() != null) currentUser.setLocation(user.getLocation());
-                if (user.getProfilePic() != null) currentUser.setProfilePic(user.getProfilePic());
-                if (user.getInterests() != null) currentUser.setInterests(user.getInterests());
-
-                return userRepository.save(currentUser);
-            }
-            throw new UserNotFoundException("User with email " + user.getEmail() + " does not exists.");
-        } catch (UserNotFoundException e) {
-            System.err.println("\n\n\n\n\n\n" + e.getMessage() + "\n\n\n\n\n\n");
-            throw e;
-        } catch (Exception e) {
-            System.err.println("\n\n\n\n\nAn unexpected error occurred: " + e.getMessage() + "\n\n\n\n\n");
-            throw  e;
-        }
+    public Flux<User> getUserByDistance(String email, double longitude, double latitude, double distance) {
+        return userRepository.findUsersByLocation(email, longitude, latitude, distance)
+                .switchIfEmpty(Flux.error(new UserNotFoundException("No users found near this location!")));
     }
 
-    public String deleteUser(String email) {
-        try{
-            if(userRepository.existsById(email)) {
-                userRepository.deleteById(email);
-                return "User with email id " + email + " deleted successfully";
-            }
-            throw new UserNotFoundException("User with email " + email + " does not exists.");
-        } catch (UserNotFoundException e) {
-            System.err.println("\n\n\n\n\n\n" + e.getMessage() + "\n\n\n\n\n\n");
-            throw e;
-        } catch (Exception e) {
-            System.err.println("\n\n\n\n\nAn unexpected error occurred: " + e.getMessage() + "\n\n\n\n\n");
-            throw  e;
-        }
+    public Flux<User> findUsersByInterest(User user, Interest interest, String gender, Integer minAge, Integer maxAge, double distance) {
+        return userRepository.findUsersByCriteria(user.getEmail(), user.getLocation().getLongitude(), user.getLocation().getLatitude(), distance, gender, minAge, maxAge, interest.getInterest(), interest.getLevel())
+                .switchIfEmpty(Flux.error(new UserNotFoundException("No users found with the given interest and criteria!")));
+    }
+
+    public Mono<User> updateUser(User user) {
+        return userRepository.findById(user.getEmail())
+                .switchIfEmpty(Mono.error(new UserNotFoundException("User not found!")))
+                .flatMap(existingUser -> {
+
+                    if (user.getFirstName() != null && !user.getFirstName().equals("")) existingUser.setFirstName(user.getFirstName());
+                    if (user.getLastName() != null && !user.getLastName().equals("")) existingUser.setLastName(user.getLastName());
+                    if (user.getGender() != null && !user.getGender().equals("")) existingUser.setGender(user.getGender());
+                    if (user.getBio() != null) existingUser.setBio(user.getBio());
+                    if (user.getDob() != null) existingUser.setDob(user.getDob());
+                    if (user.getLocation() != null) existingUser.setLocation(user.getLocation());
+                    if (user.getProfilePic() != null) existingUser.setProfilePic(user.getProfilePic());
+                    if (user.getInterests() != null) existingUser.setInterests(user.getInterests());
+                    if (user.getPassword() != null) existingUser.setPassword(user.getPassword());
+
+                    return userRepository.save(existingUser);
+                });
+    }
+
+    public Mono<String> deleteUser(String email) {
+        return userRepository.findById(email)
+                .switchIfEmpty(Mono.error(new UserNotFoundException("User not found!")))
+                .flatMap(existingUser -> userRepository.delete(existingUser).then(Mono.just("User deleted successfully!")));
+    }
+
+    public Mono<Boolean> login(String email, String password) {
+        return userRepository.findById(email)
+                .switchIfEmpty(Mono.error(new UserNotFoundException("User not found!")))
+                .map(user -> user.getPassword().equals(password));
     }
 }
